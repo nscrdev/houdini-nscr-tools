@@ -124,7 +124,7 @@ def _build_for_material(mat):
 
     # --- cable unpack -------------------------------------------------------
     cu = parent.createNode("cableunpack", unpack_name)
-    cu.setInput(0, mat)
+    cu.setInput(0, mat, 1)  # output 1 = "material" cable (output 0 is "geo")
     cu.parm("fields").set(len(active))
     ft_items = cu.parm("fieldtype1").parmTemplate().menuItems()
     type_idx = {"vector": ft_items.index("vector"), "float": ft_items.index("float")}
