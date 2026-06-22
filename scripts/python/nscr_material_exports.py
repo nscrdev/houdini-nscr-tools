@@ -108,60 +108,63 @@ def _output_path(ext):
     return "$HIP/mat/$HIPNAME/$HIPNAME.$OS.$F4.{}".format(ext)
 
 
-def _build_for_material(mat):
+def _existing_fields(cu):
+    """Map existing cableunpack field name -> output index (field order - 1)."""
+    n = cu.parm("fields").eval()
+    return {cu.parm("fieldname%d" % i).eval(): i - 1 for i in range(1, n + 1)}
+
+
+def _ensure_channel(mat, cu, field, arity, is_color, field_map):
+    """Create whatever is missing for one channel (field / null tap / ROP).
+
+    Returns True if anything was created. Existing nodes are left untouched, and
+    new cableunpack fields are appended so existing output->null taps don't shift.
+    """
     parent = mat.parent()
     prefix = mat.name()
-    unpack_name = prefix + "_Unpack"
+    title = _title(field)
+    null_name = prefix + "_Unpack_" + title
+    rop_name = prefix + "_" + title
 
-    if parent.node(unpack_name) is not None:
-        return "skipped (already built): " + prefix
+    nl = parent.node(null_name)
+    rop = parent.node(rop_name)
+    if nl is not None and rop is not None:
+        return False  # already fully built
 
-    active = _active_channels(mat)
-    if not active:
-        return "skipped (no active channels): " + prefix
+    # ensure a cableunpack field exists for this channel (append if new)
+    if field in field_map:
+        out_index = field_map[field]
+    else:
+        new = cu.parm("fields").eval() + 1
+        cu.parm("fields").set(new)
+        cu.parm("fieldname%d" % new).set(field)
+        ft = cu.parm("fieldtype%d" % new).parmTemplate().menuItems()
+        cu.parm("fieldtype%d" % new).set(ft.index("vector" if arity == "vector" else "float"))
+        out_index = new - 1
+        field_map[field] = out_index
 
-    cc_items = None
-
-    # --- cable unpack -------------------------------------------------------
-    cu = parent.createNode("cableunpack", unpack_name)
-    cu.setInput(0, mat, 1)  # output 1 = "material" cable (output 0 is "geo")
-    cu.parm("fields").set(len(active))
-    ft_items = cu.parm("fieldtype1").parmTemplate().menuItems()
-    type_idx = {"vector": ft_items.index("vector"), "float": ft_items.index("float")}
-    for i, (field, arity, _is_color) in enumerate(active, start=1):
-        cu.parm("fieldname%d" % i).set(field)
-        cu.parm("fieldtype%d" % i).set(type_idx[arity])
-    cu.setDisplayFlag(False)
     mpos = mat.position()
-    cu.setPosition(mpos + hou.Vector2(3.0, 0.0))
+    ystep = -1.2 * out_index
 
-    for out_i, (field, _arity, is_color) in enumerate(active):
-        ch_title = _title(field)
-        ystep = -1.2 * out_i
-
-        # --- null tap -------------------------------------------------------
-        nl = parent.createNode("null", prefix + "_Unpack_" + ch_title)
-        nl.setInput(0, cu, out_i)
+    if nl is None:
+        nl = parent.createNode("null", null_name)
+        nl.setInput(0, cu, out_index)
         if nl.parm("outputs") is not None:
             nl.parm("outputs").set(1)
         nl.setColor(hou.Color((0.6, 0.7, 0.77)))
         nl.setDisplayFlag(False)
         nl.setPosition(mpos + hou.Vector2(6.0, ystep))
 
-        # --- rop image ------------------------------------------------------
-        rop_name = prefix + "_" + ch_title
+    if rop is None:
         rop = parent.createNode("rop_image", rop_name)
-        if cc_items is None:
-            cc_items = rop.parm("colorconversion").parmTemplate().menuItems()
-
-        rop.parm("coppath").set("../" + prefix + "_Unpack_" + ch_title)
+        cc_items = rop.parm("colorconversion").parmTemplate().menuItems()
+        rop.parm("coppath").set("../" + null_name)
         rop.parm("useport1").set(True)
         rop.parm("aov1").set("output1")
         rop.parmTuple("res").set((1024, 1024))
         rop.parm("f1").set(1)
         rop.parm("f2").set(120)
         rop.parm("f3").set(1)
-
         if is_color:
             ext = "png"
             rop.parm("colorconversion").set(cc_items.index("bakeocio"))
@@ -172,12 +175,40 @@ def _build_for_material(mat):
         rop.parm("ociodisplay").set("sRGB - Display")
         rop.parm("ocioview").set("ACES 1.0 - SDR Video")
         rop.parm("copoutput").set(_output_path(ext))
-
         rop.setColor(hou.Color((0.65, 0.4, 0.5)))
         rop.setPosition(mpos + hou.Vector2(9.0, ystep))
 
-    fields = ", ".join(f for f, _a, _c in active)
-    return "built {} ({}): {}".format(prefix, len(active), fields)
+    return True
+
+
+def _build_for_material(mat):
+    parent = mat.parent()
+    prefix = mat.name()
+    unpack_name = prefix + "_Unpack"
+
+    active = _active_channels(mat)
+    if not active:
+        return "skipped (no active channels): " + prefix
+
+    # create the cable unpack on first run; reuse it on later (incremental) runs
+    cu = parent.node(unpack_name)
+    fresh = cu is None
+    if fresh:
+        cu = parent.createNode("cableunpack", unpack_name)
+        cu.setInput(0, mat, 1)  # output 1 = "material" cable (output 0 is "geo")
+        cu.parm("fields").set(0)
+        cu.setDisplayFlag(False)
+        cu.setPosition(mat.position() + hou.Vector2(3.0, 0.0))
+
+    field_map = _existing_fields(cu)
+    added = [f for (f, a, c) in active
+             if _ensure_channel(mat, cu, f, a, c, field_map)]
+
+    if fresh:
+        return "built {} ({}): {}".format(prefix, len(added), ", ".join(added))
+    if added:
+        return "updated {} (+{}): {}".format(prefix, len(added), ", ".join(added))
+    return "up to date: " + prefix
 
 
 def run():

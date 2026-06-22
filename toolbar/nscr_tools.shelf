@@ -24,7 +24,8 @@ is wired, or a default_* parm differs from factory), then creates:
 Color channels (basecolor + *_color tints) export as PNG with display tonemapping
 (Bake to OCIO Display/View). All other channels export as raw EXR.
 
-Materials that already have a <MAT>_Unpack node are skipped.
+Safe to re-run: on a material that already has an unpack, newly active channels
+are appended without disturbing the ones already built.
 ]]></helpText>
     <toolMenuContext name="network">
       <contextNetType>COP</contextNetType>

@@ -53,8 +53,13 @@ ROPs are written to `$HIP/mat/$HIPNAME/$HIPNAME.$OS.$F4.<ext>` at 1024×1024, wi
 `ACEScg` working space and the `sRGB - Display` / `ACES 1.0 - SDR Video` view
 transform.
 
-**Re-running** — materials that already have a `<MAT>_Unpack` node are skipped, so
-the tool is safe to run repeatedly across a network.
+**Re-running (incremental)** — the tool is safe to run repeatedly. On a material
+that already has a `<MAT>_Unpack`, it detects any *newly* active channels (e.g. a
+default you've since changed) and appends them — new cableunpack field, null tap,
+and ROP — without disturbing the channels already built. Existing fields keep
+their output index, so existing taps never shift. A material with nothing new to
+add reports *up to date*. (Channels you later revert to default are left in place,
+not removed.)
 
 ## Installation
 
