@@ -2,6 +2,10 @@
 otls/backup/
 *.hdalc
 
+# Python
+__pycache__/
+*.pyc
+
 # Houdini misc
 *.bgeo.sc
 *.rat

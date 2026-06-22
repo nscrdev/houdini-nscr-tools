@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <toolshelf name="nscr_tools" label="NSCR Tools">
+    <memberTool name="nscr_material_exports"/>
+  </toolshelf>
+
+  <tool name="nscr_material_exports" label="COPS Mat Exports" icon="$HFS/houdini/pic/sphere_deep.pic">
+    <helpText><![CDATA[= Material Exports =
+
+Builds texture-export chains downstream of the selected COP Preview Material(s).
+
+For each selected previewmaterial node it detects the active channels (an input
+is wired, or a default_* parm differs from factory), then creates:
+
+* <MAT>_Unpack            - cableunpack with one field per active channel
+* <MAT>_Unpack_<Channel>  - one null tap per field
+* <MAT>_<Channel>         - one rop_image per channel
+
+Color channels (basecolor + *_color tints) export as PNG with display tonemapping
+(Bake to OCIO Display/View). All other channels export as raw EXR.
+
+Materials that already have a <MAT>_Unpack node are skipped.
+]]></helpText>
+    <toolMenuContext name="network">
+      <contextNetType>COP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import importlib
+import nscr_material_exports
+importlib.reload(nscr_material_exports)
+nscr_material_exports.run()
+]]></script>
+  </tool>
+</shelfDocument>

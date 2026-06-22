@@ -10,6 +10,51 @@ A personal, ongoing collection of Houdini scripts, digital assets (HDAs), and to
   - `cop_Nick.oklab_ramp.1.0.hda` — OKLab color ramp for COPs
 - `presets/` — Houdini parameter presets
 - `toolbar/` — custom shelf tools
+  - **COPS Mat Exports** (`nscr_tools.shelf`) — auto-builds texture-export chains downstream of COP Preview Materials
+- `scripts/python/` — importable Python modules backing the shelf tools
+  - `nscr_material_exports.py` — logic for the COPS Mat Exports tool
+
+## Shelf tools
+
+### COPS Mat Exports
+
+Auto-builds texture-export chains downstream of selected COP **Preview Material**
+(`previewmaterial`) nodes, so you don't have to wire up the unpack/null/ROP
+plumbing by hand for every material.
+
+**Usage:** in a COP network, select one or more Preview Material nodes and click
+**COPS Mat Exports** on the *NSCR Tools* shelf.
+
+**What it does** — for each selected material it detects the *active* channels,
+then builds, named after the material:
+
+| Node | Type | Purpose |
+|------|------|---------|
+| `<MAT>_Unpack` | `cableunpack` | one field per active channel |
+| `<MAT>_Unpack_<Channel>` | `null` | one tap per unpacked field |
+| `<MAT>_<Channel>` | `rop_image` | one image output per channel |
+
+**Active-channel detection** — a channel is exported when **either** its input is
+wired **or** its `default_*` parameter differs from the factory default. Everything
+left at default and unconnected is skipped.
+
+**Field types** — color/vector channels (basecolor, normal, the `*_color` tints)
+unpack as RGB `vector`; scalar channels (metalness, roughness, coat, …) unpack as
+Mono `float`.
+
+**Colorspace / format** — handled per channel:
+
+- **Color channels** (basecolor + all `*_color` tints) → **PNG**, `colorconversion`
+  set to *Bake to OpenColorIO Display/View* (display tonemapping applied).
+- **All other (data) channels** (metalness, roughness, coat, normal, …) → **EXR**,
+  `colorconversion` set to *Raw*.
+
+ROPs are written to `$HIP/mat/$HIPNAME/$HIPNAME.$OS.$F4.<ext>` at 1024×1024, with
+`ACEScg` working space and the `sRGB - Display` / `ACES 1.0 - SDR Video` view
+transform.
+
+**Re-running** — materials that already have a `<MAT>_Unpack` node are skipped, so
+the tool is safe to run repeatedly across a network.
 
 ## Installation
 
