@@ -168,9 +168,12 @@ def _ensure_channel(mat, cu, field, arity, is_color, field_map):
         if is_color:
             ext = "png"
             rop.parm("colorconversion").set(cc_items.index("bakeocio"))
+            rop.parm("size1").set("int16")   # 16-bit integer PNG (avoid 8-bit banding)
         else:
             ext = "exr"
             rop.parm("colorconversion").set(cc_items.index("raw"))
+            rop.parm("size1").set("float16")  # 16-bit float EXR
+            rop.parm("vm_image_exr_compression").set("piz")  # lossless, smallest on grainy data
         rop.parm("ociocolorspace").set("ACEScg")
         rop.parm("ociodisplay").set("sRGB - Display")
         rop.parm("ocioview").set("ACES 1.0 - SDR Video")

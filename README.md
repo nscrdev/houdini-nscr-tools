@@ -45,9 +45,13 @@ Mono `float`.
 **Colorspace / format** — handled per channel:
 
 - **Color channels** (basecolor + all `*_color` tints) → **PNG**, `colorconversion`
-  set to *Bake to OpenColorIO Display/View* (display tonemapping applied).
+  set to *Bake to OpenColorIO Display/View* (display tonemapping applied), **Data
+  Size** forced to *16-bit integer*.
 - **All other (data) channels** (metalness, roughness, coat, normal, …) → **EXR**,
-  `colorconversion` set to *Raw*.
+  `colorconversion` set to *Raw*, **Data Size** forced to *16-bit float*.
+
+Data Size is set explicitly (never left on *Automatic*) so outputs don't silently
+drop to 8-bit and band.
 
 ROPs are written to `$HIP/mat/$HIPNAME/$HIPNAME.$OS.$F4.<ext>` at 1024×1024, with
 `ACEScg` working space and the `sRGB - Display` / `ACES 1.0 - SDR Video` view
