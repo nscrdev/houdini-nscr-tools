@@ -7,7 +7,7 @@
 
   <toolshelf name="nscr_tools" label="NSCR Tools">
     <memberTool name="nscr_material_exports"/>
-    <memberTool name="nscr_texture_version_up"/>
+    <memberTool name="nscr_file_version_up"/>
   </toolshelf>
 
   <tool name="nscr_material_exports" label="COPS Mat Exports" icon="$HFS/houdini/pic/sphere_deep.pic">
@@ -38,8 +38,8 @@ nscr_material_exports.run()
 ]]></script>
   </tool>
 
-  <tool name="nscr_texture_version_up" label="Texture Version Up" icon="$HFS/houdini/pic/drawable/drawable_arrowup.png">
-    <helpText><![CDATA[= Texture Version Up =
+  <tool name="nscr_file_version_up" label="File Version Up" icon="$HFS/houdini/pic/drawable/drawable_arrowup.png">
+    <helpText><![CDATA[= File Version Up =
 
 Nuke-style version-up for MaterialX image nodes. Select one or more MaterialX
 image nodes, run the tool, and each
@@ -58,9 +58,9 @@ A summary dialog reports: updated, already-latest, no-version-token, and skipped
       <contextNetType>COP</contextNetType>
     </toolMenuContext>
     <script scriptType="python"><![CDATA[import importlib
-import nscr_texture_version_up
-importlib.reload(nscr_texture_version_up)
-nscr_texture_version_up.run()
+import nscr_file_version_up
+importlib.reload(nscr_file_version_up)
+nscr_file_version_up.run()
 ]]></script>
   </tool>
 </shelfDocument>

@@ -11,8 +11,10 @@ A personal, ongoing collection of Houdini scripts, digital assets (HDAs), and to
 - `presets/` — Houdini parameter presets
 - `toolbar/` — custom shelf tools
   - **COPS Mat Exports** (`nscr_tools.shelf`) — auto-builds texture-export chains downstream of COP Preview Materials
+  - **File Version Up** (`nscr_tools.shelf`) — bumps selected file-referencing nodes to the latest version on disk
 - `scripts/python/` — importable Python modules backing the shelf tools
   - `nscr_material_exports.py` — logic for the COPS Mat Exports tool
+  - `nscr_file_version_up.py` — logic for the File Version Up tool
 
 ## Shelf tools
 
@@ -64,6 +66,42 @@ and ROP — without disturbing the channels already built. Existing fields keep
 their output index, so existing taps never shift. A material with nothing new to
 add reports *up to date*. (Channels you later revert to default are left in place,
 not removed.)
+
+### File Version Up
+
+Nuke-style "version up" (think `alt`+`↑` on a Read node) for any file-referencing
+node. Select one or more nodes and click **File Version Up** on the *NSCR Tools*
+shelf — each node's file path is bumped to the **latest version that exists on
+disk**, and a summary dialog reports what changed.
+
+**Usage:** select one or more supported nodes and click **File Version Up**. Works
+on:
+
+| Context | Node | File parm |
+|---------|------|-----------|
+| MaterialX builder (VOP) | `mtlximage` / `mtlxtiledimage` | `file` |
+| Copernicus COPs | `file` | `filename` |
+| Classic COP2 | `file` | `filename1` |
+
+**Version detection** — a version token is `vNNN` (either case) found **anywhere**
+in the path: in a folder (`.../v003/...`), in the filename (`..._v003.exr`), or
+both. When a path has more than one token (e.g. matching folder *and* filename),
+they all move together to the same new version. The tool globs the disk for the
+highest version that actually exists and jumps straight to it.
+
+**Frame & UDIM handling** — frame/tile *tokens* (`$F`, `$F4`, `%04d`, `####`,
+`<UDIM>`) are left untouched, since the node resolves them at cook time. A
+*literal* frame number (e.g. `.0001.`) is different: the real frame can change
+between versions, so the tool adopts the new version's actual frame on disk (the
+lowest, if several) — the bumped path always points at a file that exists.
+
+**Preserved exactly** — relative paths stay relative and absolute stays absolute;
+variables like `$HIP` are kept unexpanded; and the version's zero-padding width is
+maintained (`v3` → `v12`, `v003` → `v012`).
+
+**Reporting** — the summary dialog groups results into *Updated to latest*,
+*Already latest*, *No version token found*, and *Skipped* (anything selected that
+isn't a supported file node), each listed by node name and version.
 
 ## Installation
 

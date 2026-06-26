@@ -13,9 +13,9 @@ is preserved: a relative path stays relative, an absolute path stays absolute, a
 zero-padding width is kept (v3 -> v12, v003 -> v012).
 
 Usage (shelf tool):
-    import importlib, nscr_texture_version_up
-    importlib.reload(nscr_texture_version_up)
-    nscr_texture_version_up.run()
+    import importlib, nscr_file_version_up
+    importlib.reload(nscr_file_version_up)
+    nscr_file_version_up.run()
 """
 
 import glob
@@ -195,4 +195,4 @@ def run():
         lines.append("\nSkipped:")
         lines += ["    " + u for u in skipped]
 
-    hou.ui.displayMessage("\n".join(lines) or "Nothing to do.", title="Texture Version Up")
+    hou.ui.displayMessage("\n".join(lines) or "Nothing to do.", title="File Version Up")
