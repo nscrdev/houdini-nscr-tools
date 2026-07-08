@@ -8,6 +8,7 @@ A personal, ongoing collection of Houdini scripts, digital assets (HDAs), and to
   - `Recipes.hda` — bundled procedural recipes
   - `cop_NSCR.make_tile.1.0.hda` — COP tile maker
   - `cop_Nick.oklab_ramp.1.0.hda` — OKLab color ramp for COPs
+  - `ns_mesh_to_svg.hda` — **NS Mesh to SVG** (SOP): mesh → interactive vector SVG / rasterised PNG
 - `presets/` — Houdini parameter presets
 - `toolbar/` — custom shelf tools
   - **COPS Mat Exports** (`nscr_tools.shelf`) — auto-builds texture-export chains downstream of COP Preview Materials
@@ -102,6 +103,42 @@ maintained (`v3` → `v12`, `v003` → `v012`).
 **Reporting** — the summary dialog groups results into *Updated to latest*,
 *Already latest*, *No version token found*, and *Skipped* (anything selected that
 isn't a supported file node), each listed by node name and version.
+
+## Digital assets
+
+### NS Mesh to SVG
+
+A SOP HDA that converts a mesh into a **true-vector SVG** — each polygon becomes
+one SVG `<path>`, so you keep crisp, editable, colored shapes rather than a traced
+raster. It can also rasterise the same projected polygons straight to **PNG**.
+
+Vector-export technique adapted from and credited to **Konstantin Magnus** —
+[Convert meshes to vector graphics](https://procegen.konstantinmagnus.de/convert-meshes-to-vector-graphics).
+
+**Usage:** drop down an **NS Mesh to SVG** SOP, feed it geometry, set the options,
+and click **Save SVG** or **Save PNG**.
+
+**Projection** — how geometry is flattened to the 2D canvas:
+
+| Mode | Behaviour |
+|------|-----------|
+| **Direct 2D (XY)** *(default)* | Fits the XY bounds to the canvas, preserving aspect (best for flat art / logos). Uses the **Margin** border. |
+| **Camera Projection** | Projects through a chosen **Camera** via `toNDC` (any 3D mesh); stores depth for correct painter-order overlap. |
+
+**Grouping** (`Group By`) — controls how polygons are collected into SVG `<g>`
+elements (each group shares a hover highlight): *Auto* (existing `class` attribute
+if present, else per-connectivity island), *Existing class attrib*, *Connectivity*,
+or *Single group*.
+
+**Style** — `Fallback Fill` (used when the geometry has no `Cd`), `Draw Stroke` +
+`Stroke Width`, `Fill Opacity`, and `Hover Opacity` (SVG hover state).
+
+**SVG Output** — writes to the `SVG File` path (default `$HIP/svg/$OS.svg`) with a
+hover-opacity CSS block, grouped `<g>`/`<path>` elements, and per-polygon fill.
+
+**PNG Output** — renders with `Transparent Background` (real alpha) or a solid
+`Background Color`, optional `Antialias (2x)` (renders at 2× and downscales), to the
+`PNG File` path (default `$HIP/svg/$OS.png`).
 
 ## Installation
 
