@@ -8,6 +8,7 @@
   <toolshelf name="nscr_tools" label="NSCR Tools">
     <memberTool name="nscr_material_exports"/>
     <memberTool name="nscr_file_version_up"/>
+    <memberTool name="nscr_catalog_import"/>
   </toolshelf>
 
   <tool name="nscr_material_exports" label="COPS Mat Exports" icon="$HFS/houdini/pic/sphere_deep.pic">
@@ -35,6 +36,37 @@ are appended without disturbing the ones already built.
 import nscr_material_exports
 importlib.reload(nscr_material_exports)
 nscr_material_exports.run()
+]]></script>
+  </tool>
+
+  <tool name="nscr_catalog_import" label="Catalog to Native" icon="$HFS/houdini/pic/sphere_deep.pic">
+    <helpText><![CDATA[= Catalog to Native Materials =
+
+Rebuilds Material-Linker catalog entries as native, editable VOP subnets.
+
+The catalog "Catalog" tab is backed by an AssetGallery database (.db). Entries come
+in as read-only USD references, so tweaking them means Edit-Material overrides. This
+tool instead opens each entry's USD material, walks its MaterialX graph, and rebuilds
+it as real nodes inside the SELECTED materiallibrary. Each material is a native
+MaterialX Builder (not a generic subnet); every texture read uses mtlxtiledimage
+(normals included). Texture paths are stored $HIP-relative; signatures and colorspaces
+are carried across.
+
+To use: select a materiallibrary LOP, run the tool. It auto-detects catalog .db files
+near $HIP (pooling multiple), or prompts for one if none are found; then multi-select
+the materials to rebuild.
+
+Handles any stock-MaterialX catalog (the ND_ -> mtlx type map is generic).
+Unsupported nodes are skipped and listed in the new subnet's comment.
+]]></helpText>
+    <toolMenuContext name="network">
+      <contextNetType>LOP</contextNetType>
+      <contextNetType>VOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import importlib
+import nscr_catalog_import
+importlib.reload(nscr_catalog_import)
+nscr_catalog_import.run()
 ]]></script>
   </tool>
 
