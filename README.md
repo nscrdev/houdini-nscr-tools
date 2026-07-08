@@ -7,7 +7,6 @@ A personal, ongoing collection of Houdini scripts, digital assets (HDAs), and to
 - `otls/` — Houdini Digital Assets (HDAs)
   - `Recipes.hda` — bundled procedural recipes
   - `cop_NSCR.make_tile.1.0.hda` — COP tile maker
-  - `cop_Nick.oklab_ramp.1.0.hda` — OKLab color ramp for COPs
   - `ns_mesh_to_svg.hda` — **NS Mesh to SVG** (SOP): mesh → interactive vector SVG / rasterised PNG
 - `presets/` — Houdini parameter presets
 - `toolbar/` — custom shelf tools
