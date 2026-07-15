@@ -61,15 +61,22 @@ def retime_scene(old_start, old_end, new_start, new_end, snap=True, dry_run=Fals
         raise ValueError("New range has zero length.")
     ratio = new_len / old_len
 
-    report = {"parms": 0, "keys": 0, "collisions": [], "errors": []}
+    report = {"parms": 0, "keys": 0, "static": 0, "collisions": [], "errors": []}
+
+    def remap(frame):
+        newf = new_start + (frame - old_start) * ratio
+        return float(round(newf)) if snap else newf
 
     work = []
     for parm, keys in _iter_keyframed_parms():
+        # Channels where no key actually moves (e.g. a single static key at
+        # the start frame) are left completely untouched.
+        if all(abs(remap(k.frame()) - k.frame()) < 1e-6 for k in keys):
+            report["static"] += 1
+            continue
         new_keys = {}  # frame -> keyframe, so snapped collisions keep the last key
         for k in keys:  # parm.keyframes() already returns detached copies
-            newf = new_start + (k.frame() - old_start) * ratio
-            if snap:
-                newf = float(round(newf))
+            newf = remap(k.frame())
             if newf in new_keys:
                 report["collisions"].append("%s (frame %g)" % (parm.path(), newf))
             k.setFrame(newf)
@@ -141,7 +148,9 @@ def run():
         hou.ui.displayMessage(str(exc), severity=hou.severityType.Error)
         return
 
-    msg = "Retimed %d keyframes on %d channels." % (report["keys"], report["parms"])
+    msg = ("Retimed %d keyframes on %d channels.\n"
+           "%d channels left untouched (no key needed to move)."
+           % (report["keys"], report["parms"], report["static"]))
     details = ""
     if report["collisions"]:
         msg += "\n%d snapped keys collided (later key kept)." % len(report["collisions"])
