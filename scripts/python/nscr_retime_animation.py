@@ -21,7 +21,11 @@ def _iter_keyframed_parms():
     parms can't be edited anyway).
     """
     for node in hou.node("/").allSubChildren(recurse_in_locked_nodes=False):
+        if node.isInsideLockedHDA() and not node.isEditableInsideLockedHDA():
+            continue
         for parm in node.parms():
+            if parm.isLocked():
+                continue
             try:
                 keys = parm.keyframes()
             except hou.OperationFailed:
@@ -94,7 +98,7 @@ def retime_scene(old_start, old_end, new_start, new_end, snap=True, dry_run=Fals
             try:
                 parm.deleteAllKeyframes()
                 parm.setKeyframes(new_keys)
-            except hou.OperationFailed as exc:
+            except (hou.OperationFailed, hou.PermissionError) as exc:
                 report["errors"].append("%s: %s" % (parm.path(), exc))
     return report
 
