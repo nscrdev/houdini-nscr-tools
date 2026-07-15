@@ -15,6 +15,9 @@ A personal, ongoing collection of Houdini scripts, digital assets (HDAs), and to
 - `scripts/python/` — importable Python modules backing the shelf tools
   - `nscr_material_exports.py` — logic for the COPS Mat Exports tool
   - `nscr_file_version_up.py` — logic for the File Version Up tool
+  - `nscr_flipbook.py` — **Flipbook camera token**: active-viewport camera name for flipbook output paths
+- `python3.11libs/` — Houdini Python startup
+  - `pythonrc.py` — registers `hou.flipcam()` at launch so expressions can call it
 
 ## Shelf tools
 
@@ -102,6 +105,31 @@ maintained (`v3` → `v12`, `v003` → `v012`).
 **Reporting** — the summary dialog groups results into *Updated to latest*,
 *Already latest*, *No version token found*, and *Skipped* (anything selected that
 isn't a supported file node), each listed by node name and version.
+
+### Flipbook camera token
+
+Houdini has no built-in `$CAM`-style variable for the active viewport camera, so
+this package provides one: `hou.flipcam()`, registered at startup by
+`python3.11libs/pythonrc.py`. Use it in a flipbook **Output Files** path via a
+backtick expression:
+
+```
+$HIP/flipbook/$HIPNAME/$HIPNAME.`pythonexprs("hou.flipcam()")`.$F4.jpg
+```
+
+which resolves to e.g. `myshot_v005.cam1.0013.jpg`.
+
+**Behaviour** — prefers the Scene Viewer on the active pane tab, then falls back
+to background viewers; returns the first camera found, or `nocam` when no viewer
+is looking through a camera (free perspective view). Works in both OBJ viewports
+(camera nodes) and Solaris/LOP viewports (USD camera prims).
+
+**Why `hou.flipcam` and not `hou.session`** — `hou.session` is rebuilt from the
+hip file on every scene load, so anything registered there dies when you change
+scenes. Attributes on `hou` persist for the whole process. The expression also
+deliberately contains no single quotes: Houdini's `flipbook.pref` wraps the
+output path in single quotes when you *Save as Default*, and nested single
+quotes get backslash-escaped and don't survive the round-trip.
 
 ## Digital assets
 
