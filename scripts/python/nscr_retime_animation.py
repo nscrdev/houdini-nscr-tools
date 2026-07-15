@@ -141,12 +141,25 @@ def run():
     if snap == 2:
         return
 
+    set_playbar = hou.ui.displayMessage(
+        "Set the playbar range to %g-%g afterwards?" % (new_start, new_end),
+        buttons=("Set playbar", "Leave as is", "Cancel"),
+        default_choice=0, close_choice=2,
+        title="Retime Scene Animation",
+    )
+    if set_playbar == 2:
+        return
+
     try:
         report = retime_scene(old_start, old_end, new_start, new_end,
                               snap=(snap == 0))
     except ValueError as exc:
         hou.ui.displayMessage(str(exc), severity=hou.severityType.Error)
         return
+
+    if set_playbar == 0:
+        hou.playbar.setFrameRange(new_start, new_end)
+        hou.playbar.setPlaybackRange(new_start, new_end)
 
     msg = ("Retimed %d keyframes on %d channels.\n"
            "%d channels left untouched (no key needed to move)."
