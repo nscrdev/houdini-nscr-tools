@@ -11,10 +11,14 @@ import sys
 
 import hou
 
-_scripts = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..", "scripts", "python"))
-if _scripts not in sys.path:
-    sys.path.insert(0, _scripts)
+# pythonrc.py is exec'd by Houdini without __file__, so locate this
+# package's scripts/python dir by scanning HOUDINI_PATH instead.
+for _root in (hou.getenv("HOUDINI_PATH") or "").split(";"):
+    _scripts = os.path.normpath(os.path.join(_root, "scripts", "python"))
+    if (os.path.isfile(os.path.join(_scripts, "nscr_flipbook.py"))
+            and _scripts not in sys.path):
+        sys.path.insert(0, _scripts)
+        break
 
 import nscr_flipbook
 
