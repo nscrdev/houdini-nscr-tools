@@ -9,6 +9,7 @@
     <memberTool name="nscr_material_exports"/>
     <memberTool name="nscr_file_version_up"/>
     <memberTool name="nscr_catalog_import"/>
+    <memberTool name="nscr_retime_animation"/>
   </toolshelf>
 
   <tool name="nscr_material_exports" label="COPS Mat Exports" icon="$HFS/houdini/pic/sphere_deep.pic">
@@ -67,6 +68,27 @@ Unsupported nodes are skipped and listed in the new subnet's comment.
 import nscr_catalog_import
 importlib.reload(nscr_catalog_import)
 nscr_catalog_import.run()
+]]></script>
+  </tool>
+
+  <tool name="nscr_retime_animation" label="Retime Animation" icon="$HFS/houdini/pic/drawable/drawable_stopwatch.png">
+    <helpText><![CDATA[= Retime Scene Animation =
+
+Scales EVERY keyframed parameter in the scene from an old frame range into a
+new one, so the whole animation plays back identically but faster/slower
+(e.g. 1-72 down to 1-61). In-between keys keep their relative positions;
+slopes/accels are rescaled to preserve tangent intent.
+
+Only parameters carrying real keyframes are touched. Expression-only
+parameters (ch(), custom hscript/python with no keys) are skipped.
+
+Options: snap retimed keys to whole frames (recommended; colliding keys keep
+the later one) or keep exact fractional frames. Fully undoable in one step.
+]]></helpText>
+    <script scriptType="python"><![CDATA[import importlib
+import nscr_retime_animation
+importlib.reload(nscr_retime_animation)
+nscr_retime_animation.run()
 ]]></script>
   </tool>
 
