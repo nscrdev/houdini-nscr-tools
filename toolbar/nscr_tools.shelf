@@ -9,6 +9,9 @@
     <memberTool name="nscr_material_exports"/>
     <memberTool name="nscr_file_version_up"/>
     <memberTool name="nscr_catalog_import"/>
+    <memberTool name="nscr_stage_import"/>
+    <memberTool name="nscr_stage_takeover"/>
+    <memberTool name="nscr_stage_editmaterial"/>
     <memberTool name="nscr_retime_animation"/>
   </toolshelf>
 
@@ -68,6 +71,111 @@ Unsupported nodes are skipped and listed in the new subnet's comment.
 import nscr_catalog_import
 importlib.reload(nscr_catalog_import)
 nscr_catalog_import.run()
+]]></script>
+  </tool>
+
+  <tool name="nscr_stage_import" label="Stage to Native" icon="$HFS/houdini/pic/sphere_deep.pic">
+    <helpText><![CDATA[= Stage to Native Materials =
+
+Rebuilds the MaterialX materials on a live LOP stage as native, editable VOP subnets.
+
+Materials that arrive by reference - an imported USD asset, an MDL-to-MaterialX
+conversion - are read-only, so tweaking them means ticking an Edit-Material
+__activate__ checkbox for every parameter you want to touch. This tool instead reads
+the material straight off the cooked stage and rebuilds its MaterialX graph as real
+nodes inside the SELECTED materiallibrary. Each material becomes a native MaterialX
+Builder (not a generic subnet); every texture read uses mtlxtiledimage (normals
+included). Texture paths are stored $HIP-relative; signatures and colorspaces are
+carried across. The source stage is only read, never modified.
+
+To use: select the materiallibrary LOP you want the materials built in, and run. It
+reads from whatever feeds the materiallibrary's first input - to read from somewhere
+else, select that LOP too. Then multi-select the materials to rebuild.
+
+Only materials with a connected outputs:mtlx:surface are listed; UsdPreviewSurface-only
+and MDL-only materials have no MaterialX graph to read. Where both graphs sit under one
+Material prim, only the MaterialX side is walked. The ND_ -> mtlx type map is generic;
+anything that still doesn't resolve is skipped and listed in the new subnet's comment.
+]]></helpText>
+    <toolMenuContext name="network">
+      <contextNetType>LOP</contextNetType>
+      <contextNetType>VOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import importlib
+import nscr_catalog_import
+importlib.reload(nscr_catalog_import)
+nscr_catalog_import.run_stage()
+]]></script>
+  </tool>
+
+  <tool name="nscr_stage_editmaterial" label="Stage to Edit Material" icon="$HFS/houdini/pic/sphere_deep.pic">
+    <helpText><![CDATA[= Stage to Edit Material Network =
+
+Creates an Edit Material Network LOP downstream of the selected LOP with every
+MaterialX material on that LOP's stage already Loaded.
+
+Loading materials into an Edit Material Network by hand means: add an entry, paste a
+path, click Load, repeat for every material. This tool does that for you. Select the
+LOP whose materials you want to edit (an imported asset, an MDL-to-MaterialX
+conversion) and run. Every material with a connected outputs:mtlx:surface is listed
+and pre-selected; deselect any you do not want. The new node is wired between the
+selected LOP and whatever was connected to its output, so the edits reach the rest of
+the graph. No other node is moved.
+
+Dive into the new node to edit a material. Tick the checkbox next to a parameter to
+override it; unticked parameters pass through unchanged.
+
+This is the override route. To take full ownership of a material as an editable
+MaterialX Builder instead, use "Stage to Native".
+]]></helpText>
+    <toolMenuContext name="network">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import importlib
+import nscr_catalog_import
+importlib.reload(nscr_catalog_import)
+nscr_catalog_import.run_edit_material()
+]]></script>
+  </tool>
+
+  <tool name="nscr_stage_takeover" label="Stage to Native (Replace)" icon="$HFS/houdini/pic/sphere_deep.pic">
+    <helpText><![CDATA[= Stage to Native (Replace) =
+
+One step: select a LOP, get a Material Library downstream of it that holds every
+MaterialX material on that stage as a native, editable MaterialX Builder, authored
+back at the ORIGINAL prim path.
+
+Because each rebuilt material lands at the same path as the referenced one, the
+library's opinion wins and every existing binding uses the native version. No Edit
+Material Network, no re-assignment, no duplicate copies under /materials.
+
+To use: select the LOP whose materials you want to own (an imported asset, an
+MDL-to-MaterialX conversion, anything with MaterialX materials on its stage) and run.
+Every material with a connected outputs:mtlx:surface is listed and pre-selected;
+deselect any you want to leave alone. The new node is wired between the selected LOP
+and whatever was connected to its output. No other node is moved. Cooking is paused
+while the library fills so large stages build in seconds.
+
+After picking materials you are asked whether to remove old materials that nothing
+binds. "Prune unused" adds a Prune LOP (Deactivate) below the library that targets every
+other Material prim with no binding, for example the MDL originals left next to their
+_mtlx conversions, so the scene graph tree is not doubled up. Materials you rebuilt and
+anything still bound are never pruned. Delete the Prune LOP to get them back.
+
+Dive into the library to edit a material like any other MaterialX Builder. Each subnet
+is tinted green and its comment names the source LOP and prim.
+
+Related: "Stage to Native" builds the same native materials as NEW copies into a
+library you already have (does not replace the originals). "Stage to Edit Material"
+takes the override route instead of rebuilding.
+]]></helpText>
+    <toolMenuContext name="network">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import importlib
+import nscr_catalog_import
+importlib.reload(nscr_catalog_import)
+nscr_catalog_import.run_stage_takeover()
 ]]></script>
   </tool>
 
