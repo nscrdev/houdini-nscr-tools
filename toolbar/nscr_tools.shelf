@@ -159,8 +159,14 @@ while the library fills so large stages build in seconds.
 After picking materials you are asked whether to remove old materials that nothing
 binds. "Prune unused" adds a Prune LOP (Deactivate) below the library that targets every
 other Material prim with no binding, for example the MDL originals left next to their
-_mtlx conversions, so the scene graph tree is not doubled up. Materials you rebuilt and
-anything still bound are never pruned. Delete the Prune LOP to get them back.
+_mtlx conversions, so the scene graph tree is not doubled up. It also targets the old
+shaders and NodeGraphs left inside each rebuilt material (USD can only add to a
+referenced prim, not remove from it). Materials you rebuilt and anything still bound are
+never pruned. Delete the Prune LOP to get them back.
+
+Textures and other nodes inside NodeGraphs are rebuilt too. A new shader whose name
+matches an old one inside the same material gets a "_native" suffix, so it is a new
+prim and does not pick up the old shader's wires.
 
 Dive into the library to edit a material like any other MaterialX Builder. Each subnet
 is tinted green and its comment names the source LOP and prim.

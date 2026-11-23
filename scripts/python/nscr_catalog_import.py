@@ -374,9 +374,14 @@ def build_material(usd_file, ref_prim_path, matlib, name=None, variant=None):
     return build_material_from_prim(mat_prim, matlib, name=name, source_note=source_note)
 
 
-def build_material_from_prim(mat_prim, matlib, name=None, source_note=None):
+def build_material_from_prim(mat_prim, matlib, name=None, source_note=None,
+                             avoid_names=()):
     """Rebuild the MaterialX material prim ``mat_prim`` as a native VOP ``subnet``
     inside the ``materiallibrary`` LOP ``matlib``. Returns the subnet.
+
+    ``avoid_names``: node names the new shaders must not take. The in-place takeover
+    passes the original material's child prim names, so the native shaders land on new
+    prims instead of merging into the old ones (which would keep the old wires alive).
 
     This is the shared rebuild core. ``mat_prim`` may come from a stage opened off disk
     (see ``build_material``) or from a live LOP's cooked stage (see ``import_stage``);
@@ -411,7 +416,10 @@ def build_material_from_prim(mat_prim, matlib, name=None, source_note=None):
         if (vop_type == "mtlximage"
                 and _PREFERRED_IMAGE_TYPE in hou.vopNodeTypeCategory().nodeTypes()):
             vop_type = _PREFERRED_IMAGE_TYPE
-        vop = subnet.createNode(vop_type, node_name=_clean_name(sp.GetName()))
+        node_name = _clean_name(sp.GetName())
+        if node_name in avoid_names:
+            node_name += "_native"
+        vop = subnet.createNode(vop_type, node_name=node_name)
         if signature and vop.parm("signature") is not None:
             token = _SIGNATURE_PARM_MAP.get(signature, signature)
             try:
@@ -434,10 +442,14 @@ def build_material_from_prim(mat_prim, matlib, name=None, source_note=None):
                 if src_path in vop_by_path:
                     pending_wires.append((dst, base, vop_by_path[src_path], src_name))
                     continue
-                if src_prim.GetPath() == mat_prim.GetPath():
-                    iface = mat.GetInput(src_name)
-                    if iface:
-                        _set_vop_parm(dst, base, iface.Get())
+                if src_prim.GetTypeName() != "Shader":
+                    # Value lives on a Material or NodeGraph interface input.
+                    iface = UsdShade.ConnectableAPI(src_prim).GetInput(src_name)
+                    val = iface.Get() if iface else None
+                    if val is not None:
+                        _set_vop_parm(dst, base, val)
+                        if isinstance(val, Sdf.AssetPath):
+                            _apply_colorspace(dst, iface.GetAttr())
                     continue
             val = usd_in.Get()
             if val is not None:
@@ -489,10 +501,9 @@ def _mtlx_graph_prims(mat_prim, mat):
     """
     frontier = []
     for context_out in (mat.GetSurfaceOutput("mtlx"), mat.GetDisplacementOutput("mtlx")):
-        if not context_out or not context_out.HasConnectedSource():
-            continue
-        for info in context_out.GetConnectedSources()[0]:
-            frontier.append(info.source.GetPrim())
+        attr = _value_source(context_out, shader_outputs_only=True) if context_out else None
+        if attr is not None:
+            frontier.append(attr.GetPrim())
 
     if not frontier:
         return [p for p in Usd.PrimRange(mat_prim)
@@ -503,8 +514,8 @@ def _mtlx_graph_prims(mat_prim, mat):
         prim = frontier.pop()
         if not prim or not prim.IsValid() or prim.GetPath().pathString in seen:
             continue
-        if prim.GetPath() == mat_prim.GetPath():
-            continue  # material-interface input; resolved to a value by the caller
+        if prim.GetTypeName() != "Shader":
+            continue  # Material / NodeGraph interface input; resolved to a value later
         seen[prim.GetPath().pathString] = prim
         for usd_in in UsdShade.Shader(prim).GetInputs():
             src_prim, _src_name = _connected_source(usd_in)
@@ -521,23 +532,39 @@ def has_mtlx_surface(prim):
     return bool(surf) and surf.HasConnectedSource()
 
 
+def _value_source(usd_port, shader_outputs_only=False):
+    """The attribute that really feeds ``usd_port`` (a shader input or material output),
+    followed through any NodeGraph boundaries. ``None`` if nothing is connected.
+
+    A plain ``GetConnectedSources`` stops at the NodeGraph's own output, so the nodes
+    inside the graph (texcoord, image, normal map ...) would never be found.
+    """
+    if not usd_port.HasConnectedSource():
+        return None
+    attrs = UsdShade.Utils.GetValueProducingAttributes(
+        usd_port, shaderOutputsOnly=shader_outputs_only)
+    return attrs[0] if attrs else None
+
+
 def _connected_source(usd_input):
-    """Return ``(source_prim, source_output_name)`` or ``(None, None)``."""
-    if not usd_input.HasConnectedSource():
+    """Return ``(source_prim, source_name)`` or ``(None, None)``.
+
+    The source is the shader whose output feeds ``usd_input``, or the Material /
+    NodeGraph whose interface input holds the value. NodeGraphs are looked through.
+    """
+    attr = _value_source(usd_input)
+    if attr is None:
         return None, None
-    infos = usd_input.GetConnectedSources()[0]
-    if not infos:
-        return None, None
-    info = infos[0]
-    return info.source.GetPrim(), info.sourceName
+    name, _kind = UsdShade.Utils.GetBaseNameAndType(attr.GetName())
+    return attr.GetPrim(), name
 
 
 def _find_surface_shader(mat, vop_by_path):
     """Find the VOP that drives the material's surface output."""
     surf_out = mat.GetSurfaceOutput("mtlx") or mat.GetSurfaceOutput()
-    if surf_out and surf_out.HasConnectedSource():
-        info = surf_out.GetConnectedSources()[0][0]
-        return vop_by_path.get(info.source.GetPrim().GetPath().pathString)
+    attr = _value_source(surf_out, shader_outputs_only=True) if surf_out else None
+    if attr is not None:
+        return vop_by_path.get(attr.GetPrim().GetPath().pathString)
     for _path, vop in vop_by_path.items():
         if "surface" in vop.type().name():
             return vop
@@ -904,8 +931,8 @@ def add_prune_lop(source, paths, name=None, inline=True):
     prune.parm("num_rules").set(1)
     prune.parm("enable1").set(1)
     prune.parm("primpattern1").set(" ".join(paths))
-    prune.setComment("Old materials replaced by {} that nothing binds (nscr_catalog_import)"
-                     .format(source.name()))
+    prune.setComment("Old materials nothing binds, and the old shaders inside the materials "
+                     "{} rebuilt (nscr_catalog_import)".format(source.name()))
     return prune
 
 
@@ -925,6 +952,9 @@ def build_native_override_library(source, mats, name=None, inline=True,
     """
     # Build with cooking paused: every multiparm edit below would otherwise recook the
     # whole downstream stage (minutes for ~90 materials instead of seconds).
+    # Read before building: the source stage may be recooked (and these prims expire).
+    old_children = [c.GetPath().pathString for prim in mats for c in prim.GetChildren()]
+
     prev_mode = hou.updateModeSetting()
     hou.setUpdateMode(hou.updateMode.Manual)
     try:
@@ -942,6 +972,9 @@ def build_native_override_library(source, mats, name=None, inline=True,
                                "materials are unused".format(matlib.path()))
         keep = [prim.GetPath().pathString for prim in mats]
         pruned = unused_material_paths(stage, keep=keep)
+        # The old shaders and NodeGraphs inside each rebuilt material: the library can
+        # only add to a referenced prim, never remove, so they are deactivated here.
+        pruned.extend(old_children)
         if pruned:
             add_prune_lop(matlib, pruned, inline=inline)
     return matlib, built, failed, pruned
@@ -963,6 +996,7 @@ def _build_native_override_library(source, mats, name, inline):
                 source_note="source: {} (live stage)\nprim:   {}\n"
                             "authored back at the same path (replaces the original)".format(
                                 source.path(), path),
+                avoid_names={c.GetName() for c in prim.GetChildren()},
             )
         except (RuntimeError, hou.OperationFailed) as err:
             failed.append("{}: {}".format(path, err))
@@ -994,9 +1028,10 @@ def run_stage_takeover():
         return
 
     choice = hou.ui.displayMessage(
-        "Remove old materials that nothing binds?\n\nAfter the takeover, other Material "
+        "Remove old materials and old shaders?\n\nAfter the takeover, other Material "
         "prims with no binding (for example the MDL originals next to their _mtlx "
-        "conversions) are dead weight that doubles up the scene graph tree. \"Prune\" "
+        "conversions) and the old shaders and NodeGraphs left inside each rebuilt "
+        "material are dead weight that doubles up the scene graph tree. \"Prune\" "
         "adds a Prune LOP (Deactivate) below the library for them.",
         buttons=("Prune unused", "Keep everything", "Cancel"),
         default_choice=0, close_choice=2, title=_TAKEOVER_TITLE,
@@ -1013,7 +1048,7 @@ def run_stage_takeover():
            "prim path, so existing bindings now use the native version.").format(
                matlib.path(), len(built))
     if prune_unused:
-        msg += "\n\nPruned {} unused material(s) via {}.".format(
+        msg += "\n\nPruned {} old material(s) and shader(s) via {}.".format(
             len(pruned), "a Prune LOP below the library" if pruned else "nothing (none found)")
     if failed:
         msg += "\n\nFAILED {}:\n".format(len(failed)) + "\n".join("  " + f for f in failed)
