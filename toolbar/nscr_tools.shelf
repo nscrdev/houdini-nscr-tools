@@ -13,6 +13,7 @@
     <memberTool name="nscr_stage_takeover"/>
     <memberTool name="nscr_stage_editmaterial"/>
     <memberTool name="nscr_retime_animation"/>
+    <memberTool name="nscr_incsave"/>
   </toolshelf>
 
   <tool name="nscr_material_exports" label="COPS Mat Exports" icon="$HFS/houdini/pic/sphere_deep.pic">
@@ -229,6 +230,21 @@ A summary dialog reports: updated, already-latest, no-version-token, and skipped
 import nscr_file_version_up
 importlib.reload(nscr_file_version_up)
 nscr_file_version_up.run()
+]]></script>
+  </tool>
+
+  <tool name="nscr_incsave" label="Increment Save" icon="SOP_file">
+    <helpText><![CDATA[= Increment Save =
+
+Saves the hip file as the next version: scene_v012.hip -> scene_v013.hip.
+The new number is one above the highest version of that file in the hip
+folder, so it never overwrites a newer file. A file with no version gets _v001.
+Same logic as the Axis "Save Incremental". Also in File > Increment and Save.
+]]></helpText>
+    <script scriptType="python"><![CDATA[import importlib
+import nscr_incsave
+importlib.reload(nscr_incsave)
+nscr_incsave.incsave()
 ]]></script>
   </tool>
 </shelfDocument>

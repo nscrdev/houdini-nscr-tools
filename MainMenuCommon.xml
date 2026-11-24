@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mainMenu>
+  <menuBar>
+    <addScriptItem id="nscr_incSave">
+      <parent>file_menu</parent>
+      <label>Increment and Save</label>
+      <scriptCode>
+<![CDATA[
+import importlib
+import nscr_incsave
+importlib.reload(nscr_incsave)
+nscr_incsave.incsave()
+]]>
+      </scriptCode>
+      <insertAfter>h.save_as</insertAfter>
+    </addScriptItem>
+  </menuBar>
+</mainMenu>
