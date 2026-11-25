@@ -8,6 +8,9 @@ A personal, ongoing collection of Houdini scripts, digital assets (HDAs), and to
   - `Recipes.hda` — bundled procedural recipes
   - `cop_NSCR.make_tile.1.0.hda` — COP tile maker
   - `ns_mesh_to_svg.hda` — **NS Mesh to SVG** (SOP): mesh → interactive vector SVG / rasterised PNG
+  - `nscr_camera_rig.hda` — **NSCR Camera Rig** (LOP): crane, dolly, pan and tilt head, lens, focus and shake for one camera
+  - `nscr_camera_focus.hda` — **NSCR Camera Focus** (LOP): keeps a camera's focus distance locked on a target
+  - `nscr_camera_setup.hda` — **NSCR Camera Setup**: a recipe that drops a Camera LOP with a Camera Rig wired after it
 - `presets/` — Houdini parameter presets
 - `toolbar/` — custom shelf tools
   - **COPS Mat Exports** (`nscr_tools.shelf`) — auto-builds texture-export chains downstream of COP Preview Materials
@@ -166,6 +169,41 @@ hover-opacity CSS block, grouped `<g>`/`<path>` elements, and per-polygon fill.
 **PNG Output** — renders with `Transparent Background` (real alpha) or a solid
 `Background Color`, optional `Antialias (2x)` (renders at 2× and downscales), to the
 `PNG File` path (default `$HIP/svg/$OS.png`).
+
+### NSCR Camera Setup
+
+Three pieces for working with cameras in Solaris. All of them appear in the Tab
+menu under **NSCR**.
+
+**NSCR Camera Setup** is the quick start. It is a tool recipe that puts down a
+Camera LOP at the origin with an **NSCR Camera Rig** wired after it, already
+pointed at that camera.
+
+**NSCR Camera Rig** (`nscr::camera_rig::1.0`) puts a camera on a crane that also
+works as an orbit. Wire it after any camera. It changes that one camera prim and
+does not make a new one.
+
+| Page | What it controls |
+|------|------------------|
+| **Rig** | Rig base (the orbit centre, a point or a prim to ride on), dolly / truck / pedestal track moves, crane swing, lift and arm length, and a pan and tilt head with optional Look At |
+| **Lens** | Optional overrides of focal length and aspect ratio |
+| **Focus** | Writes `focusDistance` (and optionally F-Stop), measured along the view axis before shake. By default focus follows the Look At point |
+| **Shake** | Fractal noise in the camera's own space, with separate intensity for position and rotation. **Loop** makes the shake repeat cleanly over a frame range |
+
+- **Match Input Camera** sets the rig controls so the output is the shot you
+  already have, so you can start from a placed camera and refine it.
+- **Enable Rig** off keeps the input transform, so the node can do focus or shake
+  only.
+- **Show Guides** (off by default) draws non-rendering guides for the rig base,
+  the Look At target, the focus target and the crane arm.
+
+**NSCR Camera Focus** (`nscr::camera_focus::1.0`) is the focus part on its own.
+Wire it after a camera and it keeps Focus Distance locked on a target on every
+frame, with an orange guide sphere (not rendered) at the focus point. Select the
+node and press Enter in the viewport to move the target.
+
+Karma only shows depth of field when the F-Stop is above 0. Both nodes have an
+**Override F-Stop** toggle to set it on the node instead of on the camera.
 
 ## Installation
 
