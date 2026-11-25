@@ -16,7 +16,7 @@ A personal, ongoing collection of Houdini scripts, digital assets (HDAs), and to
   - `nscr_material_exports.py` — logic for the COPS Mat Exports tool
   - `nscr_file_version_up.py` — logic for the File Version Up tool
   - `nscr_flipbook.py` — **Flipbook camera token**: active-viewport camera name for flipbook output paths
-- `python3.11libs/` — Houdini Python startup
+- `python3.11libs/`, `python3.13libs/` — Houdini Python startup (one per Houdini Python version; Houdini 22 uses 3.13)
   - `pythonrc.py` — registers `hou.flipcam()` at launch so expressions can call it
 
 ## Shelf tools
@@ -110,7 +110,7 @@ isn't a supported file node), each listed by node name and version.
 
 Houdini has no built-in `$CAM`-style variable for the active viewport camera, so
 this package provides one: `hou.flipcam()`, registered at startup by
-`python3.11libs/pythonrc.py`. Use it in a flipbook **Output Files** path via a
+`pythonrc.py` (in `python3.11libs/` and `python3.13libs/`). Use it in a flipbook **Output Files** path via a
 backtick expression:
 
 ```
