@@ -14,9 +14,37 @@ import os
 import sys
 import traceback
 
-# husk execs this file without __file__, so the module dir is spelled out
-_here = "Z:/Houdini/packages/houdini-nscr-tools/scripts/python"
-if _here not in sys.path:
+
+def _module_dir():
+    """Find this file's folder. husk execs it without __file__, so fall back
+    to the code object's filename, then $NSCR_TOOLS, then HOUDINI_PATH."""
+    candidates = []
+    try:
+        candidates.append(os.path.dirname(os.path.abspath(__file__)))
+    except NameError:
+        pass
+    try:
+        import inspect
+        fname = inspect.currentframe().f_code.co_filename
+        if fname and not fname.startswith("<"):
+            candidates.append(os.path.dirname(os.path.abspath(fname)))
+    except Exception:
+        pass
+    root = os.environ.get("NSCR_TOOLS")
+    if root:
+        candidates.append(os.path.join(root, "scripts", "python"))
+    for entry in os.environ.get("HOUDINI_PATH", "").split(os.pathsep):
+        entry = entry.strip()
+        if entry and entry != "&":
+            candidates.append(os.path.join(entry, "scripts", "python"))
+    for d in candidates:
+        if os.path.isfile(os.path.join(d, "nscr_post_convert.py")):
+            return d
+    return None
+
+
+_here = _module_dir()
+if _here and _here not in sys.path:
     sys.path.insert(0, _here)
 
 
@@ -40,7 +68,7 @@ def _exr_paths(stage):
 def main():
     import nscr_post_convert as pc
     hfs = os.environ.get("HFS") or os.path.join(os.path.dirname(sys.executable), "..")
-    hoiiotool = os.path.join(hfs, "bin", "hoiiotool.exe")
+    hoiiotool = pc.hoiiotool_path(hfs)
     exrs = [p for p in _exr_paths(stage) if os.path.exists(p)]
     if not exrs:
         print("[post_convert/husk] no rendered EXRs found on stage; nothing to convert")

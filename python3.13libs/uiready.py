@@ -1,8 +1,8 @@
 """Warm Houdini's viewport OCIO view transforms at startup (NSCR).
 
-Install location: Z:/Houdini/packages/houdini-nscr-tools/python3.13libs/uiready.py
-(loaded via the NSCR_Tools package; runs automatically once the UI is ready,
-interactive sessions only).
+Install location: $NSCR_TOOLS/python3.13libs/uiready.py
+(loaded via the houdini-nscr-tools package; runs automatically once the UI is
+ready, interactive sessions only).
 
 Houdini builds each OCIO view's GPU transform lazily on first use and caches
 it for the session, so the first switch to every view stalls. This flips the

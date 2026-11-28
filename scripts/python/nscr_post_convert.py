@@ -23,6 +23,12 @@ OIIO_DISPLAY = "sRGB - Display"
 OIIO_VIEW = "ACES 2.0 - SDR 100 nits (Rec.709)"
 
 
+def hoiiotool_path(hfs):
+    """Houdini's own oiiotool under an install folder, on any platform."""
+    name = "hoiiotool.exe" if os.name == "nt" else "hoiiotool"
+    return os.path.join(hfs, "bin", name)
+
+
 def _picture_parm(rop):
     """The parm holding the output image path: the ROP's own override if set,
     else 'picture' on the rendersettings node the ROP actually renders.
@@ -148,7 +154,7 @@ def run(rop):
         print("[post_convert] no EXRs found; nothing to convert")
         return
 
-    hoiiotool = os.path.join(hou.expandString("$HFS"), "bin", "hoiiotool.exe")
+    hoiiotool = hoiiotool_path(hou.expandString("$HFS"))
     # ALWAYS the ACES 2.0 studio config, never the scene $OCIO: the 1.0 and
     # 2.0 SDR views ship in SEPARATE built-in configs, so pinning the config
     # pins the look (seqview finding).
